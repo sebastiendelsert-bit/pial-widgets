@@ -1,0 +1,218 @@
+<title>Demande d'absence AESH</title>
+<style>
+  /* Layout: reproduction fidèle du formulaire officiel A4 ; une seule apparence « papier », identique à l'écran et à l'impression. */
+  :root {
+    --paper: #ffffff;
+    --ink: #111111;
+    --rule: #222222;
+    --red: #c00000;
+    --blue: #1a3fa0;
+    --muted: #555555;
+    --screen-bg: #e9e6df;
+    --font: "Liberation Serif", "Times New Roman", Times, "Nimbus Roman", serif;
+    color-scheme: light;
+  }
+  html, body { background: var(--screen-bg); color: var(--ink); margin: 0; }
+  body { font-family: var(--font); font-size: 11.5pt; line-height: 1.35; padding-block: 16px; padding-inline: 16px; }
+  .toolbar { max-width: 210mm; margin: 0 auto 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-family: system-ui, sans-serif; font-size: 13px; color: var(--muted); }
+  .toolbar button { font: inherit; padding: 6px 14px; border: 1px solid #888; border-radius: 4px; background: #fff; cursor: pointer; color: var(--ink); }
+  .toolbar button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .sheet { background: var(--paper); width: 210mm; max-width: 100%; min-height: 297mm; margin: 0 auto; padding: 14mm 16mm 12mm; box-sizing: border-box; box-shadow: 0 2px 12px rgba(0,0,0,.18); }
+
+  .titlebox { width: 62%; margin: 2mm 0 10mm auto; border: 1px solid var(--rule); outline: 1px solid var(--rule); outline-offset: 2px; text-align: center; padding: 3mm 4mm; }
+  .titlebox h1 { margin: 0; font-size: 20pt; letter-spacing: .3px; font-weight: 700; text-wrap: balance; }
+  .titlebox .sub { font-size: 12pt; }
+
+  .section { margin-top: 7mm; }
+  .section-head { display: flex; align-items: flex-end; gap: 10px; font-weight: 700; }
+  .section-head .line { flex: 1; border-bottom: 1px solid var(--rule); height: .8em; }
+  .section-head .warn { color: var(--red); font-weight: 700; flex: 1; text-align: center; border-bottom: 1px solid var(--rule); padding-bottom: 1px; }
+  .box { border-left: 1px solid var(--rule); border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); padding: 3mm 3mm 3mm 2mm; margin-top: 2mm; }
+  .row { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; margin: 2mm 0; }
+  .lbl { white-space: nowrap; }
+  .val { border-bottom: 1px dotted var(--ink); min-width: 40mm; flex: 1; min-height: 1.2em; padding: 0 3px; }
+  .val.short { flex: 0 0 auto; min-width: 22mm; }
+  .val.mid { flex: 0 0 auto; min-width: 70mm; }
+  .cb { display: inline-block; width: .95em; height: .95em; border: 1px solid var(--ink); vertical-align: -.12em; margin-right: 4px; text-align: center; line-height: .9em; font-size: .95em; }
+  .cb.on::after { content: "✕"; font-weight: 700; }
+  .indent { margin-left: 12mm; }
+  .arrow { font-family: "DejaVu Sans", "Segoe UI Symbol", sans-serif; margin-right: 6px; }
+  .sig { display: flex; justify-content: space-between; gap: 20px; margin: 6mm 0 2mm; flex-wrap: wrap; }
+  .sig .who { font-weight: 700; }
+  .evalid { font-size: 10pt; color: var(--blue); font-style: italic; }
+  .pending { font-size: 10pt; color: var(--muted); font-style: italic; }
+  .cut { border: 0; border-top: 2px dashed var(--rule); margin: 8mm 0 4mm; }
+  .avis { display: grid; grid-template-columns: 1.1fr 1fr; gap: 6mm 10mm; min-height: 60mm; }
+  .avis .signblock { font-weight: 700; }
+  .avis .signblock .evalid, .avis .signblock .pending { display: block; font-weight: 400; margin-top: 1mm; }
+  .footer { text-align: center; margin-top: 8mm; font-weight: 700; font-size: 12.5pt; }
+  .footer .mail { color: var(--blue); font-weight: 400; font-size: 12pt; display: block; word-break: break-all; }
+  .legal { font-size: 9pt; color: var(--muted); margin-top: 6mm; border-top: 1px solid #bbb; padding-top: 2mm; }
+  .legal b { color: var(--ink); }
+
+  @media (max-width: 640px) {
+    .sheet { padding: 8mm 5mm; min-height: 0; }
+    .titlebox { width: 100%; }
+    .avis { grid-template-columns: 1fr; min-height: 0; }
+  }
+  @media print {
+    @page { size: A4; margin: 10mm; }
+    html, body { background: #fff; padding: 0; }
+    .toolbar { display: none; }
+    .sheet { box-shadow: none; width: auto; min-height: 0; padding: 4mm 6mm; }
+    .section { break-inside: avoid; }
+  }
+</style>
+
+<div class="toolbar" id="toolbar">
+  <button type="button" id="btnPrint">Imprimer / Enregistrer en PDF</button>
+  <span id="status">Rempli à partir de la ligne sélectionnée dans Grist.</span>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="titlebox">
+    <h1>DEMANDE D'AUTORISATION<br>D'ABSENCE AESH</h1>
+    <div class="sub">(à établir au moins 48 h avant l'absence)</div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span>DEMANDEUR :</span><span class="line"></span></div>
+    <div class="box">
+      <div class="row"><span class="lbl">NOM :</span><span class="val" id="f_nom"></span><span class="lbl">Prénom :</span><span class="val" id="f_prenom"></span></div>
+      <div class="row"><span class="lbl">Nom de naissance :</span><span class="val mid" id="f_naissance"></span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span>EMPLOYEUR : SAGERE</span><span class="line"></span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span>ÉTABLISSEMENT D'EXERCICE :</span><span class="line"></span></div>
+    <div class="box" id="f_etabs">
+      <div class="row"><span class="lbl">RNE :</span><span class="val short"></span><span class="lbl">Ets :</span><span class="val"></span><span class="lbl">Ville :</span><span class="val"></span></div>
+      <div class="row"><span class="lbl">RNE :</span><span class="val short"></span><span class="lbl">Ets :</span><span class="val"></span><span class="lbl">Ville :</span><span class="val"></span></div>
+      <div class="row"><span class="lbl">au sein du PIAL :</span><span class="val" id="f_pial"></span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span>LA DEMANDE :</span><span class="warn">JOINDRE LES JUSTIFICATIFS NÉCESSAIRES</span></div>
+    <div class="box">
+      <div class="row"><span class="lbl">Date de l'absence :</span><span class="lbl">du</span><span class="val short" id="f_du"></span><span class="lbl">à</span><span class="val short" id="f_du_h"></span><span class="lbl">au</span><span class="val short" id="f_au"></span><span class="lbl">à</span><span class="val short" id="f_au_h"></span></div>
+      <div class="row"><span><span class="cb" id="cb_formation"></span>Formation</span></div>
+      <div class="row"><span><span class="cb" id="cb_famille"></span>Événements familiaux :</span><span class="val" id="f_famille"></span></div>
+      <div class="row" style="flex-direction:column;align-items:stretch;gap:1mm">
+        <span><span class="cb" id="cb_enfant"></span>garde d'enfant malade / garde momentanée de l'enfant</span>
+        <span class="indent"><span class="arrow">↳</span>le conjoint bénéficie d'autorisations d'absence pour garde d'enfant malade : <span class="cb" id="cb_conj_oui"></span>oui &nbsp; <span class="cb" id="cb_conj_non"></span>non</span>
+      </div>
+      <div class="row"><span><span class="cb" id="cb_autre"></span>Autre, à préciser :</span><span class="val" id="f_autre"></span></div>
+      <div class="row"><span class="lbl">Pièce(s) justificative(s) jointe(s) au dépôt :</span><span id="f_piece"></span></div>
+    </div>
+    <div class="sig">
+      <span>Date : <span id="f_date_depot"></span></span>
+      <span><span class="who">Signature de l'AESH</span><br><span id="f_sig_aesh" class="pending"></span></span>
+    </div>
+  </div>
+
+  <hr class="cut">
+
+  <div class="section" style="margin-top:0">
+    <div class="section-head"><span>AVIS DE L'AUTORITÉ :</span><span class="line"></span></div>
+    <div class="box avis">
+      <div>
+        <div><span class="cb" id="cb_fav"></span>Favorable</div>
+        <div class="indent"><span class="arrow">↳</span><span class="cb" id="cb_avec"></span>avec traitement &nbsp;&nbsp; <span class="cb" id="cb_sans"></span>sans traitement</div>
+        <div style="margin-top:3mm"><span class="cb" id="cb_defav"></span>Défavorable</div>
+      </div>
+      <div class="signblock">Date et signature du responsable de l'établissement :<span id="f_sig_ecole" class="pending"></span></div>
+      <div></div>
+      <div class="signblock">Date et signature du responsable du PIAL :<span id="f_sig_pial" class="pending"></span></div>
+    </div>
+  </div>
+
+  <div class="footer">DEMANDE D'AUTORISATION ET JUSTIFICATIFS À TRANSMETTRE À<span class="mail" id="f_sagere"></span></div>
+
+  <div class="legal">
+    <b>Validation électronique.</b> Ce document est établi dans l'application PIAL à partir de la demande déposée en ligne. Les signatures manuscrites sont remplacées par les validations électroniques des interlocuteurs, chacun identifié par sa connexion avec son adresse académique : l'AESH (dépôt et confirmation de la demande), le responsable de l'établissement (avis) et le responsable du PIAL (validation puis transmission au SAGERE). Les noms et dates portés ci-dessus en font foi ; une mention « en attente » signale une étape non encore validée.
+  </div>
+</div>
+
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<script>
+(function () {
+  var SAMPLE = {
+    nom: "EXEMPLE", prenom: "Aesh", naissance: "",
+    etabs: [{rne: "0595507R", nom: "Ecole primaire René Clair", ville: "Villeneuve-d'Ascq"}],
+    pial: "PIAL 21 N",
+    du: "20/10/2026", du_h: "08h00", au: "20/10/2026", au_h: "16h30",
+    motif: "Enfant malade", complement: "", conjoint: "non", piece: true,
+    date_depot: "13/10/2026",
+    aesh_valide: true, aesh_date: "13/10/2026", aesh_nom: "Mme EXEMPLE Aesh",
+    decision_ecole: "Favorable – sans traitement", ecole_par: "M Cardot Rudi (Directeur)", ecole_date: "13/10/2026",
+    decision_pial: "", pial_par: "", pial_date: "",
+    sagere: "dsden62.sagere@ac-lille.fr"
+  };
+  function $(id) { return document.getElementById(id); }
+  function txt(id, v) { $(id).textContent = v || ""; }
+  function cb(id, on) { $(id).classList.toggle("on", !!on); }
+  function dots(n) { return "…".repeat(n); }
+
+  function render(d) {
+    txt("f_nom", d.nom); txt("f_prenom", d.prenom); txt("f_naissance", d.naissance || "");
+    var box = $("f_etabs"); var rows = box.querySelectorAll(".row");
+    var etabs = (d.etabs || []).slice(0, 2);
+    for (var i = 0; i < 2; i++) {
+      var vals = rows[i].querySelectorAll(".val"); var e = etabs[i] || {};
+      vals[0].textContent = e.rne || ""; vals[1].textContent = e.nom || ""; vals[2].textContent = e.ville || "";
+    }
+    txt("f_pial", d.pial);
+    txt("f_du", d.du); txt("f_du_h", d.du_h); txt("f_au", d.au); txt("f_au_h", d.au_h);
+    var m = (d.motif || "").toLowerCase();
+    var isForm = m.indexOf("formation") === 0, isFam = m.indexOf("vénement") >= 0 || m.indexOf("venement") >= 0, isEnf = m.indexOf("enfant") >= 0;
+    var isAutre = !!m && !isForm && !isFam && !isEnf;
+    cb("cb_formation", isForm); cb("cb_famille", isFam); cb("cb_enfant", isEnf); cb("cb_autre", isAutre);
+    txt("f_famille", isFam ? (d.complement || "") : "");
+    txt("f_autre", isAutre ? (d.motif + (d.complement ? " – " + d.complement : "")) : "");
+    var c = (d.conjoint || "").toLowerCase();
+    var conjNon = c.indexOf("ne bénéficie pas") >= 0 || c.indexOf("non") === 0;
+    var conjOui = !conjNon && (c.indexOf("bénéficie") >= 0 || c.indexOf("oui") === 0);
+    cb("cb_conj_oui", isEnf && conjOui); cb("cb_conj_non", isEnf && conjNon);
+    txt("f_piece", d.piece ? "oui" : "non");
+    txt("f_date_depot", d.date_depot || dots(10));
+    var sa = $("f_sig_aesh");
+    if (d.aesh_valide) { sa.className = "evalid"; sa.textContent = "Validé électroniquement par " + (d.aesh_nom || "l'AESH") + " le " + (d.aesh_date || "") + " (connexion académique)"; }
+    else { sa.className = "pending"; sa.textContent = "En attente de confirmation électronique par l'AESH"; }
+    var de = d.decision_ecole || "";
+    cb("cb_fav", de.indexOf("Favorable") === 0); cb("cb_avec", de.indexOf("avec") >= 0); cb("cb_sans", de.indexOf("sans") >= 0); cb("cb_defav", de.indexOf("Défavorable") === 0);
+    var se = $("f_sig_ecole");
+    if (de) { se.className = "evalid"; se.textContent = "Avis « " + de + " » validé électroniquement par " + (d.ecole_par || "la direction") + " le " + (d.ecole_date || ""); }
+    else { se.className = "pending"; se.textContent = "En attente de l'avis du responsable de l'établissement"; }
+    var dp = d.decision_pial || ""; var sp = $("f_sig_pial");
+    if (dp) { sp.className = "evalid"; sp.textContent = "Décision « " + dp + " » validée électroniquement par " + (d.pial_par || "le PIAL") + " le " + (d.pial_date || ""); }
+    else { sp.className = "pending"; sp.textContent = "En attente de la validation du responsable du PIAL"; }
+    txt("f_sagere", d.sagere || "");
+  }
+
+  $("btnPrint").addEventListener("click", function () { window.print(); });
+
+  var inGrist = false;
+  try {
+    if (window.grist && window.grist.ready && window.parent !== window) {
+      inGrist = true;
+      grist.ready({ requiredAccess: "read table", columns: [{ name: "data", title: "Colonne Formulaire_json (Depot_absence)" }] });
+      grist.onRecord(function (rec, mappings) {
+        try {
+          var mapped = grist.mapColumnNames(rec, mappings) || {};
+          var raw = mapped.data;
+          if (!raw) { $("status").textContent = "Choisissez la colonne Formulaire_json dans les options du widget."; return; }
+          render(typeof raw === "string" ? JSON.parse(raw) : raw);
+          $("status").textContent = "Rempli à partir de la ligne sélectionnée.";
+        } catch (e) { $("status").textContent = "Donnée illisible : " + e; }
+      });
+      grist.onRecords(function () {});
+    }
+  } catch (e) { inGrist = false; }
+  if (!inGrist) { render(SAMPLE); $("status").textContent = "Aperçu avec des données d'exemple (hors Grist)."; }
+})();
+</script>
