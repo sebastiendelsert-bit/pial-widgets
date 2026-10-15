@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sélecteur PIAL</title>
+<style>
+  /* Sélecteur compact : un menu déroulant remplace une liste-tableau qui prend de la place.
+     Il pilote les autres widgets de la page (lien « SELECT BY » vers ce widget). */
+  :root {
+    --fg: var(--grist-theme-text, #262633);
+    --muted: var(--grist-theme-text-light, #6b6b80);
+    --bg: var(--grist-theme-page-bg, #ffffff);
+    --field: var(--grist-theme-input-bg, #ffffff);
+    --border: var(--grist-theme-input-border, #c9c9d4);
+    --accent: var(--grist-theme-control-primary-bg, #16b378);
+    color-scheme: light dark;
+  }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; padding: 8px 10px; box-sizing: border-box; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 4px; text-transform: uppercase; letter-spacing: .03em; }
+  .wrap { display: flex; gap: 8px; align-items: center; }
+  select {
+    flex: 1; min-width: 0; font: inherit; font-size: 16px; /* 16px : pas de zoom auto sur iPhone */
+    padding: 9px 36px 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--field); color: var(--fg); appearance: none; -webkit-appearance: none; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 18px) 55%, calc(100% - 12px) 55%;
+    background-size: 6px 6px, 6px 6px; background-repeat: no-repeat;
+  }
+  select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button.nav { font: inherit; font-size: 18px; line-height: 1; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 8px; background: var(--field); color: var(--fg); cursor: pointer; flex: none; }
+  button.nav:disabled { opacity: .35; cursor: default; }
+  .count { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .detail { font-size: 13px; color: var(--muted); margin-top: 4px; white-space: pre-line; }
+  .empty { color: var(--muted); font-size: 14px; padding: 6px 0; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+  <label id="titre" for="choix">Choisir</label>
+  <div class="wrap" id="zone">
+    <button class="nav hidden" id="prec" type="button" aria-label="Précédent">‹</button>
+    <select id="choix" aria-describedby="detail"></select>
+    <button class="nav hidden" id="suiv" type="button" aria-label="Suivant">›</button>
+  </div>
+  <div class="detail" id="detail"></div>
+  <div class="count" id="compte"></div>
+  <div class="empty hidden" id="vide">Aucune ligne à afficher.</div>
+
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<script>
+/*
+  Paramètres d'URL (tous facultatifs) :
+    titre=Choisir une école     intitulé affiché au-dessus du menu
+    tri=0                       garde l'ordre de la table (par défaut : tri par groupe puis libellé)
+    fleches=1                   ajoute des boutons ‹ › pour passer à la ligne voisine
+    compte=0                    masque le nombre de lignes
+    premier=0                   ne sélectionne pas automatiquement la première ligne
+  Colonnes à associer dans Grist :
+    Libelle (obligatoire), Groupe (facultatif, crée des sous-titres), Detail (facultatif, ligne d'aide sous le menu)
+*/
+(function () {
+  var P = new URLSearchParams(location.search);
+  var titre = P.get("titre") || "Choisir";
+  var trier = P.get("tri") !== "0";
+  var fleches = P.get("fleches") === "1";
+  var montrerCompte = P.get("compte") !== "0";
+  var autoPremier = P.get("premier") !== "0";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var sel = $("choix"), detail = $("detail"), compte = $("compte"), vide = $("vide"), zone = $("zone");
+  var prec = $("prec"), suiv = $("suiv");
+  $("titre").textContent = titre;
+  if (fleches) { prec.classList.remove("hidden"); suiv.classList.remove("hidden"); }
+
+  var lignes = [];      // [{id, lib, grp, det}] dans l'ordre affiché
+  var courant = null;   // rowId sélectionné
+
+  function txt(v) {
+    if (v === null || v === undefined) return "";
+    if (Array.isArray(v)) return v[0] === "L" ? v.slice(1).join(", ") : v.join(", ");
+    return String(v);
+  }
+
+  function rendre() {
+    sel.innerHTML = "";
+    var aucun = lignes.length === 0;
+    vide.classList.toggle("hidden", !aucun);
+    zone.classList.toggle("hidden", aucun);
+    compte.textContent = (montrerCompte && !aucun) ? lignes.length + (lignes.length > 1 ? " lignes" : " ligne") : "";
+    if (aucun) { detail.textContent = ""; return; }
+
+    var groupes = lignes.some(function (l) { return l.grp; });
+    var parent = sel, dernier = null;
+    lignes.forEach(function (l) {
+      if (groupes && l.grp !== dernier) {
+        parent = document.createElement("optgroup");
+        parent.label = l.grp || "—";
+        sel.appendChild(parent);
+        dernier = l.grp;
+      }
+      var o = document.createElement("option");
+      o.value = String(l.id);
+      o.textContent = l.lib || "(sans nom)";
+      parent.appendChild(o);
+    });
+    synchro();
+  }
+
+  function index(id) {
+    for (var i = 0; i < lignes.length; i++) if (lignes[i].id === id) return i;
+    return -1;
+  }
+
+  function synchro() {
+    var i = index(courant);
+    if (i < 0) { sel.selectedIndex = -1; detail.textContent = ""; }
+    else { sel.value = String(courant); detail.textContent = lignes[i].det || ""; }
+    prec.disabled = i <= 0;
+    suiv.disabled = i < 0 || i >= lignes.length - 1;
+  }
+
+  function choisir(id) {
+    if (id === null || id === undefined) return;
+    courant = id;
+    synchro();
+    grist.setCursorPos({ rowId: id }).catch(function () {});
+  }
+
+  sel.addEventListener("change", function () { choisir(Number(sel.value)); });
+  prec.addEventListener("click", function () { var i = index(courant); if (i > 0) choisir(lignes[i - 1].id); });
+  suiv.addEventListener("click", function () { var i = index(courant); if (i >= 0 && i < lignes.length - 1) choisir(lignes[i + 1].id); });
+
+  grist.ready({
+    requiredAccess: "read table",
+    allowSelectBy: true,
+    columns: [
+      { name: "Libelle", title: "Libellé affiché dans le menu", type: "Any" },
+      { name: "Groupe", title: "Groupe (sous-titres du menu)", type: "Any", optional: true },
+      { name: "Detail", title: "Détail affiché sous le menu", type: "Any", optional: true }
+    ]
+  });
+
+  grist.onRecords(function (recs, mappings) {
+    var m = grist.mapColumnNames(recs, mappings);
+    if (!m) { lignes = []; vide.textContent = "Associez la colonne « Libellé » dans le panneau de droite."; rendre(); return; }
+    vide.textContent = "Aucune ligne à afficher.";
+    lignes = m.map(function (r) {
+      return { id: r.id, lib: txt(r.Libelle), grp: txt(r.Groupe), det: txt(r.Detail) };
+    });
+    if (trier) {
+      lignes.sort(function (a, b) {
+        return a.grp.localeCompare(b.grp, "fr", { sensitivity: "base" }) ||
+               a.lib.localeCompare(b.lib, "fr", { sensitivity: "base", numeric: true });
+      });
+    }
+    rendre();
+    if (index(courant) < 0 && autoPremier && lignes.length) choisir(lignes[0].id);
+  });
+
+  grist.onRecord(function (rec) {
+    if (rec && rec.id !== courant) { courant = rec.id; synchro(); }
+  });
+})();
+</script>
+</body>
+</html>
